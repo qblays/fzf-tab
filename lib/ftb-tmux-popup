@@ -43,10 +43,12 @@ local popup_height popup_y popup_width popup_x
 if (( cursor_y * 2 > window_height )); then
   # show above the cursor
   popup_height=$(( comp_lines + 4 >= cursor_y ? cursor_y : comp_lines + 4 ))
+  echo "1 " $popup_height >> ~/testzsh
   popup_y=$cursor_y
 else
   # show below the cursor
   popup_height=$(( comp_lines + 4 >= (window_height - cursor_y) ? window_height - cursor_y : comp_lines + 4 ))
+  echo "2 " $popup_height >> ~/testzsh
   popup_y=$(( cursor_y + popup_height + 1 ))
   fzf_opts+=(--layout=reverse)
 fi
@@ -54,13 +56,19 @@ fi
 # calculate the popup width and x position
 popup_width=$(( comp_length + 5 > window_width ? window_width : comp_length + 5 ))
 popup_x=$(( cursor_x + popup_width > window_width ? window_width - popup_width : cursor_x ))
-
+echo $comp_lines cursor_y $cursor_y>> ~/testzsh
+fzf_opts+=(--height=$(( popup_height - 2 )) )
+echo $fzf_opts >>~/testzsh
 echo -E "cd ${(qq)PWD}; $commands[fzf] ${(qq)fzf_opts[@]} < $tmp_dir/list-$$ > $tmp_dir/result-$$" > $tmp_dir/fzf-$$
+
+echo -E "tmux popup -x $popup_x -y $popup_y \
+       -w $popup_width -h $popup_height \
+       -KE -R '. $tmp_dir/fzf-$$'" > $tmp_dir/popup-$$
 {
   tmux popup -x $popup_x -y $popup_y \
        -w $popup_width -h $popup_height \
        -KE -R ". $tmp_dir/fzf-$$"
   echo -E "$(<$tmp_dir/result-$$)"
 } always {
-  command rm $tmp_dir/*-$$
+  #command rm $tmp_dir/*-$$
 }
